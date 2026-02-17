@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>PIM Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <h1>Personal Intelligence Monitor</h1>
+  <section>
+    <h2>Feed Management</h2>
+    <form method="post" action="/sources/add">
+      <input name="name" placeholder="Source name" required />
+      <input name="url" placeholder="https://..." required />
+      <button type="submit">Add Source</button>
+    </form>
+    <ul>
+      {% for source in sources %}
+      <li>{{ source.name }} ({{ source.source_type }})</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section>
+    <h2>Topic Domains</h2>
+    <form method="post" action="/domains/add">
+      <input name="name" placeholder="Domain name" required />
+      <input name="description" placeholder="Description" required />
+      <input name="keywords" placeholder="keyword1, keyword2" />
+      <button type="submit">Add Domain</button>
+    </form>
+    <ul>
+      {% for domain in domains %}
+      <li><b>{{ domain.name }}</b> — {{ domain.description }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section>
+    <h2>Pipeline Actions</h2>
+    <div class="actions">
+      <form method="post" action="/run/ingest"><button>Run Ingestion</button></form>
+      <form method="post" action="/run/score"><button>Run Scoring + Summary</button></form>
+      <form method="post" action="/run/digest"><button>Generate Digest</button></form>
+    </div>
+  </section>
+
+  <section>
+    <h2>Recent Articles</h2>
+    <table>
+      <thead><tr><th>Title</th><th>Summary</th><th>Stance</th></tr></thead>
+      <tbody>
+      {% for article in articles %}
+      <tr>
+        <td><a href="{{ article.url }}">{{ article.title }}</a></td>
+        <td>{{ article.summary or 'Pending' }}</td>
+        <td>{{ article.stance or '-' }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</body>
+</html>

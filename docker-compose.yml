@@ -1,0 +1,11 @@
+services:
+  pim:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - PIM_DATABASE_URL=sqlite:///./pim.db
+      - PIM_INGEST_INTERVAL_MINUTES=60
+      - PIM_DIGEST_OUTPUT_DIR=sample_output
+    volumes:
+      - ./:/app
