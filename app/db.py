@@ -1,5 +1,5 @@
 from collections.abc import Generator
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import (
     Boolean,
@@ -33,7 +33,7 @@ class Source(Base):
     url: Mapped[str] = mapped_column(String(2048), unique=True)
     source_type: Mapped[str] = mapped_column(String(50), default="rss")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     articles: Mapped[list["Article"]] = relationship(back_populates="source")
 
@@ -65,7 +65,7 @@ class Article(Base):
     notable_quotes: Mapped[str | None] = mapped_column(Text, nullable=True)
     contrarian_flag: Mapped[bool] = mapped_column(Boolean, default=False)
     saved: Mapped[bool] = mapped_column(Boolean, default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     source: Mapped[Source] = relationship(back_populates="articles")
     scores: Mapped[list["ArticleScore"]] = relationship(back_populates="article", cascade="all,delete-orphan")
@@ -90,7 +90,7 @@ class Feedback(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     article_id: Mapped[int] = mapped_column(ForeignKey("articles.id"))
     positive: Mapped[bool] = mapped_column(Boolean)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 def get_db() -> Generator[Session, None, None]:

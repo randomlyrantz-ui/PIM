@@ -29,6 +29,26 @@ Environment variables (`PIM_` prefix):
 - `PIM_OPENAI_API_KEY` (optional)
 - `PIM_OPENAI_MODEL` (default `gpt-4o-mini`)
 
+
+## Monitoring profile (updated)
+- **Sources monitored by default** now include management research, policy/governance, and preprint channels (e.g., MIT SMR, HBR, Brookings, OECD, NBER, arXiv AI/cs.CY, EU AI Act updates, Stanford HAI).
+- **Keyword taxonomy** is split into primary and secondary signals focused on leadership, cognition, ethics, systems, and tools/AI.
+- **Scoring function** explicitly weights evidence-bearing terms higher than hype terms and normalizes to a **1–10 relevance score** for digest output.
+- **Feedback loop** supports natural labels:
+  - `keep this` → positive reinforcement
+  - `discard this` → negative reinforcement
+
+Digest entries are emitted in this format:
+
+```
+title:
+source_url:
+date_published:
+summary:
+tags: [list]
+relevance_score: #
+```
+
 ## API highlights
 - `POST /run/ingest`
 - `POST /run/score`
