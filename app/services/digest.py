@@ -1,11 +1,12 @@
 from collections import defaultdict
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import Article, ArticleScore, Domain
+from app.services.relevance import compute_relevance
 
 
 class DigestService:
@@ -13,7 +14,7 @@ class DigestService:
         self.db = db
 
     def generate_digest(self, days: int = 1) -> str:
-        since = datetime.now(UTC) - timedelta(days=days)
+        since = datetime.now(timezone.utc) - timedelta(days=days)
         rows = (
             self.db.query(Article, Domain.name, ArticleScore.score)
             .join(ArticleScore, Article.id == ArticleScore.article_id)
@@ -29,27 +30,26 @@ class DigestService:
                 grouped[domain_name].append((article, score))
                 seen_ids.add(article.id)
 
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         lines = [f"# PIM Digest ({now.date()})", ""]
         for domain, items in grouped.items():
             lines.append(f"## {domain}")
-            for article, score in items[:5]:
-                lines.append(f"- **{article.title}** ({score:.0f}) - {article.summary or 'Summary pending'} [{article.url}]({article.url})")
-            lines.append("")
+            for article, _score in items[:5]:
+                relevance = compute_relevance(article.content, self.db)
+                lines.extend(
+                    [
+                        f"title: {article.title}",
+                        f"source_url: {article.url}",
+                        f"date_published: {article.published_at.date() if article.published_at else now.date()}",
+                        f"summary: {article.summary or 'Summary pending'}",
+                        f"tags: {relevance.tags}",
+                        f"relevance_score: {relevance.score_1_to_10}",
+                        "",
+                    ]
+                )
 
-        contrarian = []
-        seen_contrarian: set[int] = set()
-        for article, _, _ in rows:
-            if article.contrarian_flag and article.id not in seen_contrarian:
-                contrarian.append(article)
-                seen_contrarian.add(article.id)
-        lines.append("## Contrarian / Alternative Views")
-        for article in contrarian[:5]:
-            lines.append(f"- {article.title} - {article.url}")
-
-        lines.append("")
         lines.append("## Emerging Patterns")
-        lines.append("- Placeholder: connect weekly pattern-detection LLM prompt for cross-source themes.")
+        lines.append("- Prioritize evidence-rich, system-level analyses and trend reversals over repeated hype narratives.")
 
         digest = "\n".join(lines)
         output_dir = Path(settings.digest_output_dir)

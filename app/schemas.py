@@ -45,4 +45,5 @@ class ArticleRead(BaseModel):
 
 
 class FeedbackCreate(BaseModel):
-    positive: bool
+    positive: bool | None = None
+    label: str | None = None

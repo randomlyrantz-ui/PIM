@@ -136,9 +136,21 @@ def save_article(article_id: int, db: Session = Depends(get_db)):
 def feedback(article_id: int, payload: FeedbackCreate, db: Session = Depends(get_db)):
     if not db.get(Article, article_id):
         raise HTTPException(404)
-    db.add(Feedback(article_id=article_id, positive=payload.positive))
+
+    positive = payload.positive
+    if positive is None and payload.label:
+        label = payload.label.strip().lower()
+        if label == "keep this":
+            positive = True
+        elif label == "discard this":
+            positive = False
+
+    if positive is None:
+        raise HTTPException(status_code=400, detail="Provide positive=true|false or label='keep this'/'discard this'.")
+
+    db.add(Feedback(article_id=article_id, positive=positive))
     db.commit()
-    return {"status": "recorded"}
+    return {"status": "recorded", "reinforcement": "positive" if positive else "negative"}
 
 
 @app.get("/search")

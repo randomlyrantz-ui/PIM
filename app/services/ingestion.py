@@ -1,5 +1,5 @@
 import logging
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 import feedparser
 import httpx
@@ -75,7 +75,7 @@ class IngestionService:
         text = soup.get_text(" ", strip=True)[:15000]
         if self.db.query(Article).filter(Article.url == source.url).first():
             return 0
-        article = Article(source_id=source.id, title=title, author=None, url=source.url, published_at=datetime.now(UTC), content=text)
+        article = Article(source_id=source.id, title=title, author=None, url=source.url, published_at=datetime.now(timezone.utc), content=text)
         self.db.add(article)
         self.db.commit()
         return 1

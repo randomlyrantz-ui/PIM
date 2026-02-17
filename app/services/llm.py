@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import Article, ArticleScore, Domain
+from app.services.relevance import compute_relevance
 
 logger = logging.getLogger(__name__)
 
@@ -64,11 +65,13 @@ class LLMService:
 
     def _keyword_score(self, content: str, domains: list[Domain]) -> dict[str, int]:
         lowered = content.lower()
+        base_relevance = compute_relevance(content, self.db).score_1_to_10 * 10
         scores = {}
         for domain in domains:
             keywords = [k.strip().lower() for k in domain.keywords.split(",") if k.strip()]
             hits = sum(lowered.count(keyword) for keyword in keywords)
-            scores[domain.name] = min(100, hits * 15)
+            domain_score = min(100, (hits * 12) + base_relevance)
+            scores[domain.name] = domain_score
         return scores
 
     def _fallback_summary(self, article: Article) -> dict:
@@ -83,11 +86,7 @@ class LLMService:
 
     def _model_score(self, article: Article, domains: list[Domain]) -> dict[str, int]:
         domain_text = "\n".join([f"- {d.name}: {d.description} ({d.keywords})" for d in domains])
-        prompt = f"""You are an expert research assistant helping a writer who focuses on leadership, workforce development, AI's impact on work, and the role of human judgment in tool-driven environments.
-Given the following article, score its relevance to each topic domain on a scale of 0-100. Only score above 50 if the article directly addresses the topic with substance, not passing mentions.
-Topic Domains:\n{domain_text}\n
-Article:\nTitle: {article.title}\nSource: {article.source.name}\nContent: {article.content[:6000]}\n
-Return JSON only with key 'scores'."""
+        prompt = f"""You are an expert research assistant monitoring sources for leadership, cognition, ethics, systems, and tools (including AI).\nEvaluate relevance with a strict bias toward evidence over hype, case studies over press releases, and trend divergence over repetition.\nGiven the article below, score relevance for each domain on a 0-100 scale.\nOnly score above 50 when there is substantive depth and system-level insight.\n\nTopic Domains:\n{domain_text}\n\nArticle:\nTitle: {article.title}\nSource: {article.source.name}\nContent: {article.content[:6000]}\n\nReturn JSON only with key 'scores'."""
         resp = self.client.chat.completions.create(
             model=settings.openai_model,
             response_format={"type": "json_object"},
@@ -97,10 +96,7 @@ Return JSON only with key 'scores'."""
         return payload.get("scores", defaultdict(int))
 
     def _model_summary(self, article: Article) -> dict:
-        prompt = f"""You are a research assistant for a writer focused on leadership, workforce development, and AI's role in organizations.
-Summarize the following article in 2-3 sentences. Focus on core claim, evidence, and why it matters.
-Return JSON keys: summary, stance(confirms|challenges|nuances), key_data(list), notable_quotes(list).
-Title: {article.title}\nSource: {article.source.name}\nContent: {article.content[:6000]}"""
+        prompt = f"""You are a research assistant focused on leadership, cognition, ethics, systems, and AI in human contexts.\nSummarize the article in 2-3 sentences with emphasis on evidence and system-level implications.\nReturn JSON keys: summary, stance(confirms|challenges|nuances), key_data(list), notable_quotes(list).\nTitle: {article.title}\nSource: {article.source.name}\nContent: {article.content[:6000]}"""
         resp = self.client.chat.completions.create(
             model=settings.openai_model,
             response_format={"type": "json_object"},
